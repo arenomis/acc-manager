@@ -165,10 +165,11 @@ export default defineComponent({
         .map(tag => ({ text: tag }));
     };
 
-    const addTag = () => {
+    const addTag = (event: KeyboardEvent) => {
       const trimmed = rawTagsInput.value.trim();
       if (trimmed && !trimmed.endsWith(';')) {
         rawTagsInput.value = trimmed + '; ';
+        event.preventDefault(); // Останавливаем отправку формы при Enter
       }
     };
 
