@@ -6,7 +6,6 @@
 
     <form @submit.prevent="handleSubmit" class="bg-white p-4 rounded shadow-sm">
 
-      <!-- Тип -->
       <div class="mb-3">
         <label class="form-label">Тип:</label>
         <select v-model="account.type" class="form-select form-select-sm rounded">
@@ -15,7 +14,6 @@
         </select>
       </div>
 
-      <!-- Логин -->
       <div class="mb-3">
         <label class="form-label">Логин:</label>
         <input
@@ -32,7 +30,6 @@
         </div>
       </div>
 
-      <!-- Пароль (только для Local) -->
       <div class="mb-3" v-show="account.type === 'Local'">
         <label class="form-label">Пароль:</label>
         <div :class="['input-group', { 'is-invalid': showErrorPassword }]">
@@ -58,7 +55,6 @@
         </div>
       </div>
 
-      <!-- Метки -->
       <div class="mb-3">
         <label class="form-label">Метки:</label>
         <small class="text-muted d-block mb-2">Введите через точку с запятой. Пример: dev; prod; staging</small>
@@ -81,7 +77,6 @@
         </div>
       </div>
 
-      <!-- Кнопки -->
       <div class="d-flex gap-2 mt-4">
         <button
           type="submit"
@@ -114,7 +109,6 @@ export default defineComponent({
     const route = useRoute();
 
     const rawTagsInput = ref('');
-    const isValidTagInput = ref(true);
 
     const accountId = route.params.id as string | undefined;
     const isEditing = computed(() => !!accountId);
@@ -127,7 +121,7 @@ export default defineComponent({
       tags: [] as { text: string }[],
     });
 
-    if (isEditing.value) {
+    if (isEditing.value && accountId) {
       const existingAccount = accountsStore.accounts.find(a => a.id === accountId);
       if (existingAccount) {
         Object.assign(account, existingAccount);
@@ -140,8 +134,7 @@ export default defineComponent({
     const showErrorPassword = ref(false);
 
     const validateLogin = () => {
-      const trimmed = account.login.trim();
-      showErrorLogin.value = trimmed.length < 3 || trimmed.length > 100;
+      showErrorLogin.value = account.login.trim().length < 3;
     };
 
     const limitLoginLength = () => {
@@ -151,7 +144,7 @@ export default defineComponent({
     const validatePassword = () => {
       if (account.type === 'Local') {
         const trimmed = account.password?.trim() || '';
-        showErrorPassword.value = trimmed.length < 6 || trimmed.length > 100;
+        showErrorPassword.value = trimmed.length < 6;
       } else {
         showErrorPassword.value = false;
       }
@@ -183,7 +176,6 @@ export default defineComponent({
       () => rawTagsInput.value,
       (newVal) => {
         account.tags = parseTagsFromString(newVal);
-        isValidTagInput.value = true;
       }
     );
 
@@ -202,32 +194,12 @@ export default defineComponent({
     };
 
     const isValidForm = computed(() => {
-      const validLogin = account.login.trim().length >= 3 && account.login.length <= 100;
+      const validLogin = account.login.trim().length >= 3;
       const validPassword =
         account.type !== 'Local' ||
-        (account.password !== null &&
-         account.password.trim().length >= 6 &&
-         account.password.length <= 100);
-
+        (account.password !== null && account.password.trim().length >= 6);
       return validLogin && validPassword;
     });
-
-    // Авто-сохранение при валидации
-    watch(
-      () => [account.login, account.password, account.type, account.tags],
-      () => {
-        validateLogin();
-        validatePassword();
-        if (isValidForm.value) {
-          if (isEditing.value) {
-            accountsStore.updateAccount(account.id, account);
-          } else {
-            accountsStore.addAccount(account);
-          }
-        }
-      },
-      { deep: true, immediate: true }
-    );
 
     const handleSubmit = () => {
       validateLogin();
@@ -236,9 +208,15 @@ export default defineComponent({
       if (!isValidForm.value) return;
 
       if (isEditing.value) {
-        accountsStore.updateAccount(account.id, account);
+        accountsStore.updateAccount(account.id, {
+          ...account,
+          password: account.password ?? undefined
+        });
       } else {
-        accountsStore.addAccount(account);
+        accountsStore.addAccount({
+          ...account,
+          password: account.password ?? undefined
+        });
       }
 
       router.push('/');
@@ -254,7 +232,6 @@ export default defineComponent({
       showPassword,
       showErrorLogin,
       showErrorPassword,
-      isValidTagInput,
       addTag,
       togglePasswordVisibility,
       validateLogin,
